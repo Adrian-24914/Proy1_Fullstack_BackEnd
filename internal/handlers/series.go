@@ -49,9 +49,23 @@ func SeriesDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleGetAllSeries maneja GET /series
+// handleGetAllSeries maneja GET /series con filtros opcionales
 func handleGetAllSeries(w http.ResponseWriter, r *http.Request) {
-	series, err := database.GetAllSeries()
+	// Obtener parámetros de query
+	genre := r.URL.Query().Get("genre")
+	search := r.URL.Query().Get("search")
+
+	var series []models.Series
+	var err error
+
+	// Si hay filtros, usar la función con filtros
+	if genre != "" || search != "" {
+		series, err = database.GetSeriesWithFilters(genre, search)
+	} else {
+		// Sin filtros, obtener todas
+		series, err = database.GetAllSeries()
+	}
+
 	if err != nil {
 		sendError(w, "Failed to fetch series", http.StatusInternalServerError)
 		return
