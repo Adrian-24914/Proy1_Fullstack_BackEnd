@@ -49,20 +49,78 @@ func SeriesDetailHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// handleGetAllSeries maneja GET /series con filtros opcionales
+// PaginatedResponse representa una respuesta paginada
+type PaginatedResponse struct {
+	Data       interface{} `json:"data"`
+	Total      int         `json:"total"`
+	Page       int         `json:"page"`
+	Limit      int         `json:"limit"`
+	TotalPages int         `json:"total_pages"`
+}
+
+// handleGetAllSeries maneja GET /series con filtros y paginación opcionales
 func handleGetAllSeries(w http.ResponseWriter, r *http.Request) {
 	// Obtener parámetros de query
 	genre := r.URL.Query().Get("genre")
 	search := r.URL.Query().Get("search")
+	pageStr := r.URL.Query().Get("page")
+	limitStr := r.URL.Query().Get("limit")
 
+	// Valores por defecto para paginación
+	page := 1
+	limit := 100 // Sin paginación por defecto, devuelve todas
+
+	// Parsear page si existe
+	if pageStr != "" {
+		if p, err := strconv.Atoi(pageStr); err == nil && p > 0 {
+			page = p
+			if limitStr == "" {
+				limit = 10 // Si especifica página, usar límite de 10 por defecto
+			}
+		}
+	}
+
+	// Parsear limit si existe
+	if limitStr != "" {
+		if l, err := strconv.Atoi(limitStr); err == nil && l > 0 && l <= 100 {
+			limit = l
+		}
+	}
+
+	// Si se especificó paginación
+	if pageStr != "" || limitStr != "" {
+		series, total, err := database.GetSeriesWithPagination(page, limit, genre, search)
+		if err != nil {
+			sendError(w, "Failed to fetch series", http.StatusInternalServerError)
+			return
+		}
+
+		if series == nil {
+			series = []models.Series{}
+		}
+
+		// Calcular total de páginas
+		totalPages := (total + limit - 1) / limit
+
+		response := PaginatedResponse{
+			Data:       series,
+			Total:      total,
+			Page:       page,
+			Limit:      limit,
+			TotalPages: totalPages,
+		}
+
+		sendJSON(w, response, http.StatusOK)
+		return
+	}
+
+	// Sin paginación, usar filtros simples
 	var series []models.Series
 	var err error
 
-	// Si hay filtros, usar la función con filtros
 	if genre != "" || search != "" {
 		series, err = database.GetSeriesWithFilters(genre, search)
 	} else {
-		// Sin filtros, obtener todas
 		series, err = database.GetAllSeries()
 	}
 
@@ -71,7 +129,6 @@ func handleGetAllSeries(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	// Si no hay series, devolver array vacío en lugar de null
 	if series == nil {
 		series = []models.Series{}
 	}
