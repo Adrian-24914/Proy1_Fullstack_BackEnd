@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"log"
 	"net/http"
 	"os"
@@ -26,13 +27,10 @@ func main() {
 	// Configurar rutas
 	mux := http.NewServeMux()
 
-	// Health check endpoint
-	mux.HandleFunc("/health", func(w http.ResponseWriter, r *http.Request) {
-		w.WriteHeader(http.StatusOK)
-		w.Write([]byte("OK"))
-	})
+	// Health check endpoint mejorado
+	mux.HandleFunc("/health", healthCheckHandler)
 
-	// Series endpoints (los implementaremos en Fase 2)
+	// Series endpoints
 	mux.HandleFunc("/series", handlers.SeriesHandler)
 	mux.HandleFunc("/series/", handlers.SeriesDetailHandler)
 
@@ -42,4 +40,22 @@ func main() {
 	// Iniciar servidor
 	log.Printf("🚀 Server starting on port %s", port)
 	log.Fatal(http.ListenAndServe(":"+port, handler))
+}
+
+// healthCheckHandler verifica el estado del servidor y la base de datos
+func healthCheckHandler(w http.ResponseWriter, r *http.Request) {
+	// Verificar conexión a la base de datos
+	dbStatus := "disconnected"
+	if err := database.DB.Ping(); err == nil {
+		dbStatus = "connected"
+	}
+
+	response := map[string]string{
+		"status":   "ok",
+		"database": dbStatus,
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(response)
 }
