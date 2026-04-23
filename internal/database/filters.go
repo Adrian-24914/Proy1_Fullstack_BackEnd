@@ -65,3 +65,82 @@ func GetSeriesWithFilters(genre, search string) ([]models.Series, error) {
 
 	return seriesList, nil
 }
+
+// GetSeriesWithPagination obtiene series con paginación
+func GetSeriesWithPagination(page, limit int, genre, search string) ([]models.Series, int, error) {
+	// Calcular offset
+	offset := (page - 1) * limit
+
+	// Construir query base
+	query := `
+		SELECT id, title, description, genre, year, rating, image_url, watched, created_at, updated_at
+		FROM series
+		WHERE 1=1
+	`
+	countQuery := "SELECT COUNT(*) FROM series WHERE 1=1"
+
+	args := []interface{}{}
+	argCount := 1
+
+	// Aplicar filtros
+	if genre != "" {
+		filter := fmt.Sprintf(" AND LOWER(genre) = LOWER($%d)", argCount)
+		query += filter
+		countQuery += filter
+		args = append(args, genre)
+		argCount++
+	}
+
+	if search != "" {
+		filter := fmt.Sprintf(" AND (LOWER(title) LIKE LOWER($%d) OR LOWER(description) LIKE LOWER($%d))", argCount, argCount)
+		query += filter
+		countQuery += filter
+		args = append(args, "%"+search+"%")
+		argCount++
+	}
+
+	// Obtener total de registros
+	var total int
+	err := DB.QueryRow(countQuery, args...).Scan(&total)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error counting series: %w", err)
+	}
+
+	// Agregar paginación
+	query += fmt.Sprintf(" ORDER BY created_at DESC LIMIT $%d OFFSET $%d", argCount, argCount+1)
+	args = append(args, limit, offset)
+
+	// Ejecutar query
+	rows, err := DB.Query(query, args...)
+	if err != nil {
+		return nil, 0, fmt.Errorf("error querying series: %w", err)
+	}
+	defer rows.Close()
+
+	var seriesList []models.Series
+	for rows.Next() {
+		var s models.Series
+		err := rows.Scan(
+			&s.ID,
+			&s.Title,
+			&s.Description,
+			&s.Genre,
+			&s.Year,
+			&s.Rating,
+			&s.ImageURL,
+			&s.Watched,
+			&s.CreatedAt,
+			&s.UpdatedAt,
+		)
+		if err != nil {
+			return nil, 0, fmt.Errorf("error scanning series: %w", err)
+		}
+		seriesList = append(seriesList, s)
+	}
+
+	if err = rows.Err(); err != nil {
+		return nil, 0, fmt.Errorf("error iterating series: %w", err)
+	}
+
+	return seriesList, total, nil
+}
