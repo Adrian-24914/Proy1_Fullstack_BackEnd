@@ -6,6 +6,7 @@ import (
 	"log"
 	"os"
 
+	"github.com/joho/godotenv"
 	_ "github.com/lib/pq" // PostgreSQL driver
 )
 
@@ -15,11 +16,13 @@ var DB *sql.DB
 func Initialize() error {
 	var err error
 
+	// Cargar .env (solo en desarrollo local)
+	godotenv.Load()
+
 	// Obtener DATABASE_URL de variable de entorno
 	databaseURL := os.Getenv("DATABASE_URL")
 	if databaseURL == "" {
-		// Fallback para desarrollo local
-		databaseURL = "postgresql://postgres:postgres@localhost:5432/series_tracker?sslmode=disable"
+		return fmt.Errorf("DATABASE_URL not set. Please create a .env file")
 	}
 
 	DB, err = sql.Open("postgres", databaseURL)
@@ -76,5 +79,19 @@ func runMigrations() error {
 	}
 
 	log.Println("✅ Migrations completed successfully")
+
+	// Insertar datos de ejemplo si la tabla está vacía
+	var count int
+	DB.QueryRow("SELECT COUNT(*) FROM series").Scan(&count)
+
+	if count == 0 {
+		seedQuery := `
+		INSERT INTO series (title, description, genre, year, rating, image_url, watched) VALUES
+		('Breaking Bad', 'A high school chemistry teacher turned methamphetamine producer.', 'Crime', 2008, 9.5, 'https://images.unsplash.com/photo-1574267432644-f610a13241d1?w=400', true)
+		`
+		DB.Exec(seedQuery)
+		log.Println("✅ Sample data inserted")
+	}
+
 	return nil
 }
