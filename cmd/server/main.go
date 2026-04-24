@@ -27,12 +27,19 @@ func main() {
 	// Configurar rutas
 	mux := http.NewServeMux()
 
-	// Health check endpoint mejorado
+	// Health check endpoint
 	mux.HandleFunc("/health", healthCheckHandler)
 
 	// Series endpoints
 	mux.HandleFunc("/series", handlers.SeriesHandler)
 	mux.HandleFunc("/series/", handlers.SeriesDetailHandler)
+
+	// Upload endpoint ← NUEVO
+	mux.HandleFunc("/upload", handlers.UploadImageHandler)
+
+	// Servir archivos estáticos (imágenes subidas) ← NUEVO
+	fs := http.FileServer(http.Dir("./uploads"))
+	mux.Handle("/uploads/", http.StripPrefix("/uploads/", fs))
 
 	// Aplicar middleware CORS
 	handler := middleware.CORS(mux)

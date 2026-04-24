@@ -16,6 +16,9 @@
 # Go module download cache
 vendor/
 
+# Uploads
+uploads/
+
 # Environment variables (never commit these)
 .env
 .env.*
