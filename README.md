@@ -6,7 +6,8 @@ Deploy en produccion: https://empowering-prosperity-production-d1ee.up.railway.a
 Frontend: https://proy1-fullstack-front-end.vercel.app
 Repositorio Frontend: https://github.com/Adrian-24914/Proy1_Fullstack_FrontEnd
 
-<img width="1915" height="906" alt="image" src="https://github.com/user-attachments/assets/162973ff-9992-46c1-a97c-a9b9aeec58a6" />
+<img width="1914" height="911" alt="image" src="https://github.com/user-attachments/assets/fd4e14ac-1470-4b81-ab9f-0b5349327713" />
+
 
 
 ---
